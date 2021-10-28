@@ -185,6 +185,7 @@ struct PS_INFO {
 class dfttest : public GenericVideoFilter
 {
 private:
+  bool has_at_least_v8;
   int bits_per_pixel;
   int pixelsize;
   bool Y, U, V, zmean, lsb_in_flag, lsb_out_flag, quiet_flag;
@@ -232,7 +233,7 @@ private:
 
   PVideoFrame GetFrame_S(int n, IScriptEnvironment* env);
   PVideoFrame GetFrame_T(int n, IScriptEnvironment* env);
-  PVideoFrame build_output_frame(IScriptEnvironment* env);
+  PVideoFrame build_output_frame(PVideoFrame &src_for_fp, IScriptEnvironment* env);
   void bypass_plane(PlanarFrame& frame, int plane);
   void conv_result_plane_to_int(int width, int height, int b, int ebuff_index, IScriptEnvironment* env);
   void merge_msb_lsb();

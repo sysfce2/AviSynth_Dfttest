@@ -23,6 +23,8 @@
 
 /*
 Modifications:
+2021.10.28 v1.9.7
+- pass avs+ frame properties
 
 2020.03.24 v1.9.6
 - parameter opt=4 for avx2
@@ -843,13 +845,16 @@ PVideoFrame dfttest::GetFrame_S(int n, IScriptEnvironment* env)
       WaitForSingleObject(pssInfo[i]->jobFinished, INFINITE);
     conv_result_plane_to_int(width, height, b, b, env);
   }
-  return build_output_frame(env);
+  return build_output_frame(src, env);
 }
 
 PVideoFrame dfttest::GetFrame_T(int n, IScriptEnvironment* env)
 {
   int pos = 0;
   PlanarFrame* src = fc->frames[0]->ppf;
+  
+  PVideoFrame src_n; // frame prop source
+
   if (tmode == 0)
   {
     for (int b = 0; b < 3; ++b)
@@ -865,7 +870,10 @@ PVideoFrame dfttest::GetFrame_T(int n, IScriptEnvironment* env)
       nlFrame* nl = fc->frames[fc->getCachePos(i - n + pos)];
       if (nl->fnum != i)
       {
-        PVideoFrame src = child->GetFrame(mapn(i), env);
+        const int mapped_n = mapn(i);
+        PVideoFrame src = child->GetFrame(mapped_n, env);
+        if (mapped_n == n && src_n == nullptr)
+          src_n = src; // save for frame prop source
         nl->pf->copyFrom(src, vi_src);
 
         switch (pixelsize) {
@@ -934,7 +942,10 @@ PVideoFrame dfttest::GetFrame_T(int n, IScriptEnvironment* env)
         nlFrame* nl = fc->frames[fc->getCachePos(i - z)];
         if (nl->fnum != i)
         {
-          PVideoFrame src = child->GetFrame(mapn(i), env);
+          const int mapped_n = mapn(i);
+          PVideoFrame src = child->GetFrame(mapped_n, env);
+          if (mapped_n == n && src_n == nullptr)
+            src_n = src; // save for frame prop source
           nl->pf->copyFrom(src, vi_src);
           switch (pixelsize) {
           case 1: copyPad<uint8_t>(nl->pf, nl->ppf, env); break;
@@ -959,12 +970,15 @@ PVideoFrame dfttest::GetFrame_T(int n, IScriptEnvironment* env)
     const int width = src->GetWidth(b);
     conv_result_plane_to_int(width, height, b, tmode == 0 ? b : (pos * 3 + b), env);
   }
-  return build_output_frame(env);
+  if (has_at_least_v8 && src_n == nullptr)
+    src_n = child->GetFrame(n, env);
+  return build_output_frame(src_n, env);
+
 }
 
-PVideoFrame dfttest::build_output_frame(IScriptEnvironment* env)
+PVideoFrame dfttest::build_output_frame(PVideoFrame &src_for_fp, IScriptEnvironment* env)
 {
-  PVideoFrame dst = env->NewVideoFrame(vi);
+  PVideoFrame dst = has_at_least_v8 ? env->NewVideoFrameP(vi, &src_for_fp) : env->NewVideoFrame(vi);
   if (lsb_out_flag)
   {
     merge_msb_lsb();
@@ -1595,6 +1609,10 @@ dfttest::dfttest(PClip _child, bool _Y, bool _U, bool _V, int _ftype, float _sig
   sbeta(_sbeta), tbeta(_tbeta),
   sfile(_sfile), sfile2(_sfile2), pminfile(_pminfile), pmaxfile(_pmaxfile)
 {
+  has_at_least_v8 = true;
+  try { env->CheckVersion(8); }
+  catch (const AvisynthError&) { has_at_least_v8 = false; }
+
   ft = fti = ftg = NULL;
   ebuff = NULL;
   hw = sigmas = sigmas2 = NULL;
