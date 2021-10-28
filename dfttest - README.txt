@@ -1,5 +1,5 @@
 
-                                       dfttest v1.9.6
+                                       dfttest v1.9.7
                                        Original code by tritical
                                        16-bit modification by Firesledge
                                        Avs+ port by DJATOM
@@ -584,6 +584,8 @@ Parameters:
 ---------------------------------------------------------------------------------------------------
 
 Changes:
+2021.10.28 v1.9.7
+  - pass Avisynth+ frame properties
 
 2020.03.24 v1.9.6
   - Enhanced: avx2 routines for mod-8 sbsize cases
